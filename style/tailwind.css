@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  body {
+    @apply dark:bg-zinc-800 bg-zinc-300;
+  }
+
+  p {
+    @apply dark:text-zinc-300 text-zinc-800;
+  }
+}
+
+@layer components {
+  .board {
+    grid-template-columns: repeat(16, [col] 5vw);
+    grid-template-rows: repeat(16, [row] 5vw);
+    @apply bg-green-600;
+  }
+  .board-lg {
+    grid-template-columns: repeat(16, [col] 2.8vw);
+    grid-template-rows: repeat(16, [row] 2.8vw);
+  }
+  .tile {
+    @apply flex items-center text-sm justify-center shadow-inner rounded bg-green-500 m-px
+    hover:bg-green-300 focus:bg-green-300 focus:ring-2 ring-yellow-400;
+     }
+
+  .tile-header {
+    @apply flex items-center text-xs justify-center
+    dark:text-zinc-300 dark:bg-zinc-800 bg-zinc-300 text-zinc-800;
+    }
+
+  .tile-letter {
+    @apply flex items-center text-base font-bold justify-center shadow rounded !bg-yellow-400 m-0.5
+    hover:bg-yellow-300 focus:bg-yellow-200 ring-2 ring-yellow-600;
+  }
+
+  .tile-bag {
+    @apply text-xl tracking-widest my-6 mx-0.5 font-bold rounded shadow w-[7vw] h-[7vw] flex items-center justify-center bg-yellow-400
+    hover:bg-purple-200 hover:ring hover:ring-purple-500 active:bg-purple-200;
+  }
+  .tile-bag-lg {
+    @apply w-[4vw] h-[4vw];
+  }
+  .tile-bag-sel {
+    @apply bg-purple-200 ring ring-purple-500;
+  }
+}
