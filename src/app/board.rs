@@ -54,25 +54,22 @@ enum Orientation {
 struct Cell {
     coord: (usize, usize),
     cell_kind: CellKind,
-    toggle: RwSignal<i32>,
+    toggle: RwSignal<bool>,
     text: RwSignal<String>,
-    num: i32,
 }
 
 impl Cell {
     fn new(
         coord: (usize, usize),
         cell_kind: CellKind,
-        toggle: RwSignal<i32>,
+        toggle: RwSignal<bool>,
         text: RwSignal<String>,
-        num: i32,
     ) -> Self {
         Self {
             coord,
             cell_kind,
             toggle,
             text,
-            num,
         }
     }
 
@@ -86,16 +83,25 @@ impl Cell {
 }
 
 #[component]
-pub fn Board() -> impl IntoView {
+fn Square(cell: Cell, setter: RwSignal<(usize, usize)>, text: String) -> impl IntoView {
+    view! {
+        <div class="tile-inner" class=("tile-letter", move || cell.toggle.get()) on:click=move |_| {
+                setter.set(cell.coord);
+                cell.toggle.update(|b| *b = !*b);}>{text}
+        </div>
+    }
+}
+
+#[component]
+pub fn Board(setter: RwSignal<(usize, usize)>) -> impl IntoView {
     let mut empty_cells: Vec<Cell> = Vec::new();
     for row in 0..BOARD_SIZE + 1 {
         for col in 0..BOARD_SIZE + 1 {
             let new_cell = Cell::new(
                 (row, col),
                 CellKind::Normal,
-                RwSignal::new(0),
+                RwSignal::new(false),
                 RwSignal::new("ok".to_string()),
-                0,
             );
             empty_cells.push(new_cell);
         }
@@ -106,9 +112,59 @@ pub fn Board() -> impl IntoView {
             (0, 0) => c.set_cell_kind(CellKind::Header(Header::Zero)),
             (0, _) => c.set_cell_kind(CellKind::Header(Header::Top)),
             (_, 0) => c.set_cell_kind(CellKind::Header(Header::Left)),
-            (1, 4) | (1, 12) | (3, 7) | (3, 9) => c.set_cell_kind(CellKind::DoubleLetter),
-            (2, 5) | (2, 9) => c.set_cell_kind(CellKind::TripleLetter),
-            (2, 2) | (2, 13) => c.set_cell_kind(CellKind::DoubleWord),
+            (1, 4)
+            | (1, 12)
+            | (3, 7)
+            | (3, 9)
+            | (4, 1)
+            | (4, 8)
+            | (4, 15)
+            | (7, 3)
+            | (7, 7)
+            | (7, 9)
+            | (7, 13)
+            | (8, 4)
+            | (8, 12)
+            | (9, 3)
+            | (9, 7)
+            | (9, 9)
+            | (9, 13)
+            | (12, 1)
+            | (12, 8)
+            | (12, 15)
+            | (13, 7)
+            | (13, 9)
+            | (15, 4)
+            | (15, 12) => c.set_cell_kind(CellKind::DoubleLetter),
+            (2, 6)
+            | (2, 10)
+            | (6, 2)
+            | (6, 6)
+            | (6, 10)
+            | (6, 14)
+            | (10, 2)
+            | (10, 6)
+            | (10, 10)
+            | (10, 14)
+            | (14, 6)
+            | (14, 10) => c.set_cell_kind(CellKind::TripleLetter),
+            (2, 2)
+            | (2, 14)
+            | (3, 3)
+            | (3, 13)
+            | (4, 4)
+            | (4, 12)
+            | (5, 5)
+            | (5, 11)
+            | (8, 8)
+            | (11, 5)
+            | (11, 11)
+            | (12, 4)
+            | (12, 12)
+            | (13, 3)
+            | (13, 13)
+            | (14, 2)
+            | (14, 14) => c.set_cell_kind(CellKind::DoubleWord),
             (1, 1) | (1, 8) | (1, 15) | (8, 1) | (8, 15) | (15, 1) | (15, 8) | (15, 15) => {
                 c.set_cell_kind(CellKind::TripleWord)
             }
@@ -116,53 +172,27 @@ pub fn Board() -> impl IntoView {
         }
     }
 
-    let draw_cells = empty_cells
+    let draw_cells = move || {
+        empty_cells
         .into_iter()
         .map(|c| {
-            view! {
-                {move || match c.cell_kind {
-                        CellKind::Header(Header::Zero) => view! {<div class="tile-header">Krab</div>},
-                        CellKind::Header(Header::Top) => view! {<div class="tile-header">{c.coord.1}</div>},
-                        CellKind::Header(Header::Left) => view! {<div class="tile-header">{Cell::num_to_char(&c.coord.0)}</div>},
-                        CellKind::DoubleLetter => view! {<div class="tile bg-cyan-200">LD</div>},
-                        CellKind::TripleLetter => view! {<div class="tile bg-blue-400">LT</div>},
-                        CellKind::DoubleWord => view! {<div class="tile bg-rose-200">MD</div>},
-                        CellKind::TripleWord => view! {<div class="tile bg-orange-600">MT</div>},
-                        _ => view! {
-                                <div class="tile" class=("tile-letter", move || c.toggle.with(|n| n % 2 == 1)) on:click=move |_| {c.toggle.update(|n| *n += 1);}>
-                                    <p>{c.coord.0}":"{c.coord.1}</p>
-                                </div>
-                            }
-                    }
+            match c.cell_kind {
+                CellKind::Header(Header::Zero) => view! {<div class="tile-header text-xs"
+                    on:click=move |_| setter.set(c.coord)>"krabs"</div>},
+                CellKind::Header(Header::Top) => view! {<div class="tile-header">{c.coord.1}</div>},
+                CellKind::Header(Header::Left) => view! {<div class="tile-header">{Cell::num_to_char(&c.coord.0)}</div>},
+                CellKind::DoubleLetter => view! {<div class="tile bg-cyan-200"><Square cell=c setter=setter text="LD".to_string()/></div>},
+                CellKind::TripleLetter => view! {<div class="tile bg-blue-400"><Square cell=c setter=setter text="LT".to_string()/></div>},
+                CellKind::DoubleWord => view! {<div class="tile bg-rose-200"><Square cell=c setter=setter text="MD".to_string()/></div>},
+                CellKind::TripleWord => view! {<div class="tile bg-orange-600"><Square cell=c setter=setter text="MT".to_string()/></div>},
+                _ => view! {<div class="tile"><Square cell=c setter=setter text="".to_string()/></div>},
                 }
-            }
         })
-        .collect::<Vec<_>>();
+        .collect_view()
+    };
 
     view! {
-        <div class="grid gap-0 board lg:board-lg border-0">{draw_cells}</div>
+
+        <div class="grid gap-0 board lg:board-lg border-0">{draw_cells()}</div>
     }
 }
-
-// if Cell::header_zero(&c) {
-//     view! {
-//         <div class="tile-header">Krab</div>
-//     }
-// } else if Cell::header_top(&c) {
-//     view! {
-//         <div class="tile-header">{c.coord.1}</div>
-//     }
-// } else if Cell::header_left(&c) {
-//     view!{
-//         <div class="tile-header">{Cell::num_to_char(&c.coord.0)}</div>
-//         }
-// } else {
-// view! {
-//     <div class="tile" class=("tile-letter", move || c.toggle.with(|n| n % 2 == 1))
-//         on:click=move |_| {
-//         c.toggle.update(|n| *n += 1);
-//     }>
-//         <p>{c.coord.0}":"{c.coord.1}</p>
-//     </div>
-// }
-// }

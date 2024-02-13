@@ -23,9 +23,15 @@
     grid-template-columns: repeat(16, [col] 2.8vw);
     grid-template-rows: repeat(16, [row] 2.8vw);
   }
+
   .tile {
-    @apply flex items-center text-sm justify-center shadow-inner rounded bg-green-500 m-px
-    hover:bg-green-300 focus:bg-green-300 focus:ring-2 ring-yellow-400;
+    @apply flex items-center text-sm justify-center shadow-inner rounded bg-green-500 m-px py-px
+    hover:bg-green-300;
+     }
+
+  .tile-inner {
+    @apply flex h-full w-full items-center text-sm justify-center shadow-inner rounded
+    hover:bg-green-300;
      }
 
   .tile-header {
