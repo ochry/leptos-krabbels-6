@@ -31,7 +31,7 @@
 
   .tile-inner {
     @apply flex h-full w-full items-center text-sm justify-center shadow-inner rounded
-    hover:bg-green-300;
+    hover:bg-green-300 cursor-pointer;
      }
 
   .tile-header {
@@ -45,7 +45,7 @@
   }
 
   .tile-bag {
-    @apply text-xl tracking-widest my-6 mx-0.5 font-bold rounded shadow w-[7vw] h-[7vw] flex items-center justify-center bg-yellow-400
+    @apply text-xl tracking-widest my-4 mx-0.5 font-bold rounded shadow w-[4vw] h-[4vw] flex-row items-center justify-center bg-yellow-400
     hover:bg-purple-200 hover:ring hover:ring-purple-500 active:bg-purple-200;
   }
   .tile-bag-lg {
