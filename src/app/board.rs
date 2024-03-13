@@ -58,29 +58,42 @@ fn Square(
     // let rack = move || global_state.global_rack.read_only().get();
     // let rack_copy = rack.clone();
 
-    // let tile_roll = move || (rack_signal()[0].0, rack_signal()[0].1);
+    let untracked_rack = RwSignal::new(Vec::new());
+    let new_untrack = move || untracked_rack.set(rack_signal.get_untracked());
 
-    //     (rack[0].0, rack[0].1)
-    //     // if let Some(t) = new_vec.pop() {
-    //     //     cell.toggle.update(|b| *b = true);
-    //     //     global_state.global_rack.update(|t| {
-    //     //         t.pop();
-    //     //     });
-    //     //     (t.0, t.1)
-    //     // } else {
-    //     //     cell.toggle.update(|b| *b = false);
-    //     //     // global_state.global_rack.update();
-    //     //     (' ', 9)
-    //     // }
-    // };
+    let tile_roll = move || {
+        if untracked_rack().is_empty() {
+            cell.toggle.update(|b| *b = false);
+            (' ', 9)
+        } else {
+            cell.toggle.update(|b| *b = true);
+            (untracked_rack()[0].0, untracked_rack()[0].1)
+        }
+    };
+
+    // if let Some(t) = copy_rack.pop() {
+    //     cell.toggle.update(|b| *b = true);
+    //     // global_state.global_rack.update(|t| t.pop());
+    //     (t.0, t.1)
+    // } else {
+    //     cell.toggle.update(|b| *b = false);
+    //     // global_state.global_rack.update();
+    //     (' ', 9)
+    // }
 
     view! {
         <div class="tile-inner" class=("tile-letter", move || cell.toggle.get()) on:click=move |_| {
-                // cell.letter_score.set(tile_roll());
-                if rack_signal().is_empty(){} else {rack_signal.update(|vec| {vec.remove(0);})};
+                if !rack_signal().is_empty() && untracked_rack().is_empty() {
+                    new_untrack()
+                }
+                else if !untracked_rack().is_empty() {
+                    untracked_rack.update(|vec| {vec.remove(0);})
+                } else {};
+                cell.letter_score.set(tile_roll());
                 coord_signal.set(cell.coord);
             }>
-                <div class=("hidden", move || cell.letter_score.with(|t| t.1) != 9)>{cell.label}</div>
+                <div class=("hidden", move || cell.letter_score.with(|t| t.1) != 9)>{cell.label}/*{if rack_cell_signal().is_empty() {'*'} else {rack_cell_signal()[0].0}}*/</div>
+
                 <div class=("hidden", move || cell.letter_score.with(|t| t.1) == 9)>
                     {move || cell.letter_score.with(|t| t.0)}
                     <sub class=("hidden", move || cell.letter_score.with(|t| t.1) == 0)>{move || cell.letter_score.with(|t| t.1)}</sub>

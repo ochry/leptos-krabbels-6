@@ -44,19 +44,6 @@ impl Bag {
         Self(bag)
     }
 
-    pub fn draw_tiles_mod(amount: u8, bag: &mut Vec<Tile>, rack: &mut Vec<Tile>) {
-        let mut rng = thread_rng();
-        for _ in 0..amount {
-            if let Some(tile) = bag.choose(&mut rng) {
-                let tile_index = bag.iter().position(|t| t.0 == tile.0).unwrap();
-                let tile_out = bag.remove(tile_index);
-                rack.push(tile_out);
-            } else {
-                break;
-            }
-        }
-    }
-
     pub fn draw_tiles(amount: u8, bag: &mut Vec<Tile>) -> Vec<Tile> {
         let mut rack = Vec::new();
         let mut rng = thread_rng();
