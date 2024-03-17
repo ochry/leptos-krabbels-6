@@ -12,7 +12,7 @@ pub fn Rack(rack_signal: RwSignal<Vec<Tile>>, bag_signal: RwSignal<Vec<Tile>>) -
             // .rev()
             .map(|t| {
                 view! {
-                    <li class="inline-block"><button class="tile-bag">
+                    <li class="inline-block"><button class="tile-rack">
                     {t.0}
                     <sub class="text-xs" class=("hidden", move || t.1 == 0)>{t.1}</sub></button></li>
                 }

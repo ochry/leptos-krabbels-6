@@ -5,7 +5,7 @@ use rand::prelude::*;
 use rand::seq::SliceRandom;
 
 #[derive(Clone, PartialEq)]
-pub struct Tile(pub char, pub u8);
+pub struct Tile(pub char, pub usize);
 
 pub struct Bag(pub Vec<Tile>);
 
@@ -39,7 +39,7 @@ impl Bag {
         bag.extend((0..1).map(|_| Tile('X', 10)));
         bag.extend((0..1).map(|_| Tile('Y', 10)));
         bag.extend((0..1).map(|_| Tile('Z', 10)));
-        bag.extend((0..2).map(|_| Tile('*', 0)));
+        bag.extend((0..2).map(|_| Tile(' ', 0)));
 
         Self(bag)
     }
@@ -60,52 +60,87 @@ impl Bag {
     }
 }
 
-// #[derive(Copy, Clone, Debug)]
-// pub struct GlobalState {
-//     pub global_rack: RwSignal<Vec<Tile>>,
-//     pub global_toggle: RwSignal<bool>,
-// }
-
-// impl GlobalState {
-//     pub fn new(amount: u8, toggle: bool) -> Self {
-//         Self {
-//             global_rack: RwSignal::new(Bag::draw_tiles_test(amount)),
-//             global_toggle: RwSignal::new(toggle),
-//         }
-//     }
-// }
-
 #[component]
 pub fn Game() -> impl IntoView {
+    let empty_board = Vec::from([Cell::new((0, 0))]);
+    let mut bag = Bag::new().0;
+
+    let board_signal = RwSignal::new(empty_board);
+    let score_signal = RwSignal::new(0);
+    let word_signal = RwSignal::new(String::from(""));
+    let word_ok_signal = RwSignal::new(false);
+    let scrabble_signal = RwSignal::new(false);
     let coord_signal = RwSignal::new((0, 0));
     let coord_x = move || coord_signal.with(|coord| coord.0);
     let coord_y = move || coord_signal.with(|coord| coord.1);
-
-    // provide_context(GlobalState::new(7, true));
-    // let global_state = use_context::<GlobalState>().unwrap();
-
-    // let mut rack = Vec::new();
-    // Bag::draw_tiles_mod(7, &mut bag, &mut rack);
-
-    let mut bag = Bag::new().0;
-    // let amount = RwSignal::new(0);
-    // let draw_tiles = Bag::draw_tiles(7, &mut bag);
-
     let bag_signal = RwSignal::new(bag.to_vec());
     let rack_signal = RwSignal::new(Vec::new());
 
-    let mut action = move || {
+    let mut pick_tiles = move || {
         // let vec_size: u8 = rack_signal.with(|vec| vec.len() as u8);
         // amount.set(7 - vec_size);
         rack_signal.set(Bag::draw_tiles(7, &mut bag));
         bag_signal.set(bag.to_vec())
     };
 
+    let validate = move || {
+        let mut word = String::from("");
+        let mut word_ok = true;
+        let mut scrabble = false;
+        let mut rack_letters = rack_signal()
+            .into_iter()
+            .map(|tile| tile.0)
+            .collect::<Vec<_>>();
+        for cell in board_signal() {
+            if (cell.letter_score)().1 != 9 {
+                word.push((cell.letter_score)().0);
+                if let Some(idx) = rack_letters
+                    .iter()
+                    .position(|l| *l == (cell.letter_score)().0)
+                {
+                    rack_letters.remove(idx);
+                } else {
+                    word_ok = false;
+                }
+            }
+        }
+        if rack_letters.is_empty() {
+            scrabble = true
+        };
+        word_signal.set(word);
+        word_ok_signal.set(word_ok);
+        scrabble_signal.set(scrabble);
+
+        let mut score = 0;
+        for cell in board_signal() {
+            if (cell.letter_score)().1 != 9 {
+                match cell.cell_kind {
+                    CellKind::DoubleLetter => score += (cell.letter_score)().1 * 2,
+                    CellKind::TripleLetter => score += (cell.letter_score)().1 * 3,
+                    _ => score += (cell.letter_score)().1,
+                }
+            }
+        }
+        for cell in board_signal() {
+            if (cell.letter_score)().1 != 9 {
+                match cell.cell_kind {
+                    CellKind::DoubleWord => score *= 2,
+                    CellKind::TripleWord => score *= 3,
+                    _ => (),
+                }
+            }
+        }
+        if scrabble {
+            score += 50
+        }
+        score_signal.set(score);
+    };
+
     view! {
 
         <main class="container mx-auto pt-2 lg:p-5 grid grid-rows-2 lg:grid-rows-1 lg:grid-cols-2">
             <div class="flex justify-center">
-                <Board coord_signal rack_signal/>
+                <Board board_signal coord_signal rack_signal/>
             </div>
 
             <div class="pl-5">
@@ -114,15 +149,18 @@ pub fn Game() -> impl IntoView {
 
 
                 <p>"Case sélectionnée: ("{coord_x}":"{coord_y}")"</p>
-                // <p>"Global State:" {draw}</p>
+                <p>"Votre score: "{score_signal}" points."</p>
+                <p>"Vous jouez le mot: "{word_signal}</p>
+                <p>"Mot dans le chevalet? " {word_ok_signal}</p>
+                <p>"Scrabble? " {scrabble_signal} <span class=("hidden", move || !scrabble_signal())>"🥳"</span></p>
 
                 <Rack rack_signal bag_signal/>
 
-                <button class="p-3 m-5 border-2 border-purple-400 bg-purple-300 rounded-md hover:border-purple-600 hover:shadow-inner"
-                on:click=move |_| {action()}>Piocher des lettres</button>
+                <button class="p-3 m-3 border-2 border-purple-400 bg-purple-300 rounded-md hover:border-purple-600 hover:shadow-inner"
+                on:click=move |_| {pick_tiles()}>Piocher des lettres</button>
 
-                // <button class="p-3 m-5 border-2 border-purple-400 bg-purple-300 rounded-md hover:border-purple-600 hover:shadow-inner"
-                // on:click=move |_| {set_tiles_test.set(rack_test.to_vec()); rack_toggle.set(true)}>Piocher des lettres</button>
+                <button class="p-3 m-3 border-2 border-purple-400 bg-purple-300 rounded-md hover:border-purple-600 hover:shadow-inner"
+                on:click=move |_| {validate()}>Valider le coup</button>
 
             </div>
 

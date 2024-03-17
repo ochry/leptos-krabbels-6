@@ -3,17 +3,18 @@ use leptos::*;
 
 const BOARD_SIZE: usize = 15;
 
-struct Cell {
+#[derive(Clone)]
+pub struct Cell {
     coord: (usize, usize),
-    cell_kind: CellKind,
+    pub cell_kind: CellKind,
     // has_tile: Option<RwSignal<Tile>>,
     toggle: RwSignal<bool>,
     label: RwSignal<String>,
-    letter_score: RwSignal<(char, u8)>,
+    pub letter_score: RwSignal<(char, usize)>,
 }
 
 impl Cell {
-    fn new(coord: (usize, usize)) -> Self {
+    pub fn new(coord: (usize, usize)) -> Self {
         Self {
             coord,
             cell_kind: CellKind::Normal,
@@ -33,7 +34,8 @@ impl Cell {
     }
 }
 
-enum CellKind {
+#[derive(Clone)]
+pub enum CellKind {
     Header(Header),
     Normal,
     DoubleLetter,
@@ -42,7 +44,8 @@ enum CellKind {
     TripleWord,
 }
 
-enum Header {
+#[derive(Clone)]
+pub enum Header {
     Zero,
     Top,
     Left,
@@ -71,16 +74,6 @@ fn Square(
         }
     };
 
-    // if let Some(t) = copy_rack.pop() {
-    //     cell.toggle.update(|b| *b = true);
-    //     // global_state.global_rack.update(|t| t.pop());
-    //     (t.0, t.1)
-    // } else {
-    //     cell.toggle.update(|b| *b = false);
-    //     // global_state.global_rack.update();
-    //     (' ', 9)
-    // }
-
     view! {
         <div class="tile-inner" class=("tile-letter", move || cell.toggle.get()) on:click=move |_| {
                 if !rack_signal().is_empty() && untracked_rack().is_empty() {
@@ -88,7 +81,7 @@ fn Square(
                 }
                 else if !untracked_rack().is_empty() {
                     untracked_rack.update(|vec| {vec.remove(0);})
-                } else {};
+                };
                 cell.letter_score.set(tile_roll());
                 coord_signal.set(cell.coord);
             }>
@@ -104,18 +97,19 @@ fn Square(
 
 #[component]
 pub fn Board(
+    board_signal: RwSignal<Vec<Cell>>,
     coord_signal: RwSignal<(usize, usize)>,
     rack_signal: RwSignal<Vec<Tile>>,
 ) -> impl IntoView {
-    let mut empty_cells: Vec<Cell> = Vec::new();
+    let mut board_cells: Vec<Cell> = Vec::new();
     for row in 0..BOARD_SIZE + 1 {
         for col in 0..BOARD_SIZE + 1 {
             let new_cell = Cell::new((row, col));
-            empty_cells.push(new_cell);
+            board_cells.push(new_cell);
         }
     }
 
-    for c in &mut empty_cells {
+    for c in &mut board_cells {
         match c.coord {
             (0, 0) => c.set_cell_kind(CellKind::Header(Header::Zero)),
             (0, _) => c.set_cell_kind(CellKind::Header(Header::Top)),
@@ -149,7 +143,7 @@ pub fn Board(
             | (15, 4)
             | (15, 12) => {
                 c.set_cell_kind(CellKind::DoubleLetter);
-                c.label.set("MD".to_string())
+                c.label.set("LD".to_string())
             }
             (2, 6)
             | (2, 10)
@@ -194,32 +188,34 @@ pub fn Board(
     }
 
     let draw_cells = move || {
-        empty_cells
+        board_signal()
             .into_iter()
-            .map(|c| match c.cell_kind {
+            .map(|cell| match cell.cell_kind {
                 CellKind::Header(Header::Zero) => {
                     view! {<div class="tile-header label-xs">"krabs"</div>}
                 }
-                CellKind::Header(Header::Top) => view! {<div class="tile-header">{c.coord.1}</div>},
+                CellKind::Header(Header::Top) => view! {<div class="tile-header">{cell.coord.1}</div>},
                 CellKind::Header(Header::Left) => {
-                    view! {<div class="tile-header">{Cell::num_to_char(&c.coord.0)}</div>}
+                    view! {<div class="tile-header">{Cell::num_to_char(&cell.coord.0)}</div>}
                 }
                 CellKind::DoubleLetter => {
-                    view! {<div class="tile bg-cyan-200"><Square cell=c coord_signal rack_signal/></div>}
+                    view! {<div class="tile bg-cyan-200"><Square cell coord_signal rack_signal/></div>}
                 }
                 CellKind::TripleLetter => {
-                    view! {<div class="tile bg-blue-400"><Square cell=c coord_signal rack_signal/></div>}
+                    view! {<div class="tile bg-blue-400"><Square cell coord_signal rack_signal/></div>}
                 }
                 CellKind::DoubleWord => {
-                    view! {<div class="tile bg-rose-200"><Square cell=c coord_signal rack_signal/></div>}
+                    view! {<div class="tile bg-rose-200"><Square cell coord_signal rack_signal/></div>}
                 }
                 CellKind::TripleWord => {
-                    view! {<div class="tile bg-orange-600"><Square cell=c coord_signal rack_signal/></div>}
+                    view! {<div class="tile bg-orange-600"><Square cell coord_signal rack_signal/></div>}
                 }
-                _ => view! {<div class="tile"><Square cell=c coord_signal rack_signal/></div>},
+                _ => view! {<div class="tile"><Square cell coord_signal rack_signal/></div>},
             })
             .collect_view()
     };
+
+    board_signal.set(board_cells);
 
     view! {
 
