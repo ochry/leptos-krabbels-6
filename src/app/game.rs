@@ -66,13 +66,16 @@ pub fn Game() -> impl IntoView {
     let mut bag = Bag::new().0;
 
     let board_signal = RwSignal::new(empty_board);
+    let valid_signal = RwSignal::new(false);
+    let played_signal = RwSignal::new(false);
     let score_signal = RwSignal::new(0);
     let word_signal = RwSignal::new(String::from(""));
-    let word_ok_signal = RwSignal::new(false);
+    let in_rack_signal = RwSignal::new(false);
+    let adjacent_signal = RwSignal::new(false);
     let scrabble_signal = RwSignal::new(false);
     let coord_signal = RwSignal::new((0, 0));
-    let coord_x = move || coord_signal.with(|coord| coord.0);
-    let coord_y = move || coord_signal.with(|coord| coord.1);
+    let coord_x_signal = move || coord_signal.with(|coord| coord.0);
+    let coord_y_signal = move || coord_signal.with(|coord| coord.1);
     let bag_signal = RwSignal::new(bag.to_vec());
     let rack_signal = RwSignal::new(Vec::new());
 
@@ -83,9 +86,29 @@ pub fn Game() -> impl IntoView {
         bag_signal.set(bag.to_vec())
     };
 
+    fn are_adjacent(coords: &[(usize, usize)]) -> bool {
+        let mut sorted_coords = coords.to_vec();
+        sorted_coords.sort();
+
+        for i in 0..sorted_coords.len() - 1 {
+            let (row1, col1) = sorted_coords[i];
+            let (row2, col2) = sorted_coords[i + 1];
+
+            if row1 == row2 && (col1 + 1 == col2 || col1 == col2 + 1) {
+                continue; // Adjacent horizontally
+            } else if col1 == col2 && (row1 + 1 == row2 || row1 == row2 + 1) {
+                continue; // Adjacent vertically
+            } else {
+                return false;
+            }
+        }
+        true
+    }
+
     let validate = move || {
         let mut word = String::from("");
-        let mut word_ok = true;
+        let mut cells_coords = Vec::new();
+        let mut in_rack = true;
         let mut scrabble = false;
         let mut rack_letters = rack_signal()
             .into_iter()
@@ -94,13 +117,14 @@ pub fn Game() -> impl IntoView {
         for cell in board_signal() {
             if (cell.letter_score)().1 != 9 {
                 word.push((cell.letter_score)().0);
+                cells_coords.push(cell.coord);
                 if let Some(idx) = rack_letters
                     .iter()
                     .position(|l| *l == (cell.letter_score)().0)
                 {
                     rack_letters.remove(idx);
                 } else {
-                    word_ok = false;
+                    in_rack = false;
                 }
             }
         }
@@ -108,8 +132,14 @@ pub fn Game() -> impl IntoView {
             scrabble = true
         };
         word_signal.set(word);
-        word_ok_signal.set(word_ok);
-        scrabble_signal.set(scrabble);
+        in_rack_signal.set(in_rack);
+
+        let adjacent = are_adjacent(&cells_coords);
+        if adjacent {
+            adjacent_signal.set(true);
+        } else {
+            adjacent_signal.set(false);
+        }
 
         let mut score = 0;
         for cell in board_signal() {
@@ -134,6 +164,15 @@ pub fn Game() -> impl IntoView {
             score += 50
         }
         score_signal.set(score);
+        scrabble_signal.set(scrabble);
+
+        if in_rack && adjacent {
+            valid_signal.set(true);
+        } else {
+            valid_signal.set(false);
+        }
+
+        played_signal.set(true);
     };
 
     view! {
@@ -147,19 +186,23 @@ pub fn Game() -> impl IntoView {
                 <h1 class="hidden lg:block p-5 text-4xl font-bold dark:text-yellow-100 text-center">"KRABBELS"</h1>
                 <h2 class="text-xs text-center p-2 mb-5 border-b-2 border-black dark:border-white dark:text-white">"A study project to learn further RUST, LEPTOS framework and TAILDWIND css."</h2>
 
+                <div class=("hidden", move || !played_signal())>
+                    <p class=("hidden", move || !valid_signal())>"✅ Le mot "<strong>{word_signal}</strong>" est correct !"</p>
+                    <p class=("hidden", move || valid_signal())>"❌ Le mot "<strong>{word_signal}</strong>" est incorrect."</p>
+                    <p class=("hidden", move || !valid_signal())>"Votre score est de "<strong>{score_signal}</strong>" points."</p>
+                    <p>"Mot dans le chevalet? " {in_rack_signal}</p>
+                    <p>"Lettres adjacentes? " {adjacent_signal}</p>
+                    <p>"Scrabble? " {scrabble_signal} <span class=("hidden", move || !scrabble_signal())>"🥳"</span></p>
+                </div>
 
-                <p>"Case sélectionnée: ("{coord_x}":"{coord_y}")"</p>
-                <p>"Votre score: "{score_signal}" points."</p>
-                <p>"Vous jouez le mot: "{word_signal}</p>
-                <p>"Mot dans le chevalet? " {word_ok_signal}</p>
-                <p>"Scrabble? " {scrabble_signal} <span class=("hidden", move || !scrabble_signal())>"🥳"</span></p>
 
                 <Rack rack_signal bag_signal/>
+                <p>"Case sélectionnée: ("{coord_x_signal}":"{coord_y_signal}")"</p>
 
-                <button class="p-3 m-3 border-2 border-purple-400 bg-purple-300 rounded-md hover:border-purple-600 hover:shadow-inner"
+                <button class="p-3 m-3 border-2 border-purple-400 bg-purple-300 rounded-md hover:border-purple-600 hover:shadow-lg"
                 on:click=move |_| {pick_tiles()}>Piocher des lettres</button>
 
-                <button class="p-3 m-3 border-2 border-purple-400 bg-purple-300 rounded-md hover:border-purple-600 hover:shadow-inner"
+                <button class="p-3 m-3 border-2 border-purple-400 bg-purple-300 rounded-md hover:border-purple-600 hover:shadow-lg"
                 on:click=move |_| {validate()}>Valider le coup</button>
 
             </div>

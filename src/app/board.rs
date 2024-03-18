@@ -5,7 +5,7 @@ const BOARD_SIZE: usize = 15;
 
 #[derive(Clone)]
 pub struct Cell {
-    coord: (usize, usize),
+    pub coord: (usize, usize),
     pub cell_kind: CellKind,
     // has_tile: Option<RwSignal<Tile>>,
     toggle: RwSignal<bool>,
